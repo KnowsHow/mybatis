@@ -120,7 +120,7 @@ public class TypeAliasRegistry {
   }
 
   /**
-   * @desc:注册类型:使用Class、未指定别名
+   * @desc: 注册类型:使用Class、未指定别名
    */
   public void registerAlias(Class<?> type) {
     // @desc: 存在@Alias注解则使用value作为Key否则使用SimpleName
@@ -132,7 +132,7 @@ public class TypeAliasRegistry {
     registerAlias(alias, type);
   }
   /**
-   * @desc:注册类型:使用Class、指定别名
+   * @desc: 注册类型:使用Class、指定别名
    * 同一别名的只能注册一种Class
    */
   public void registerAlias(String alias, Class<?> value) {
@@ -146,7 +146,7 @@ public class TypeAliasRegistry {
     TYPE_ALIASES.put(key, value);
   }
   /**
-   * @desc:注册类型:使用Class名称、指定别名
+   * @desc: 注册类型:使用Class名称、指定别名
    */
   public void registerAlias(String alias, String value) {
     try {
