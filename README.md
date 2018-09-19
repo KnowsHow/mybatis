@@ -3,6 +3,7 @@
 doc
 -
 *  [自动配置](https://github.com/KnowsHow/mybatis/blob/master/doc/自动配置.md)
+    1. [构建入口](https://github.com/KnowsHow/mybatis/blob/master/doc/构建入口.md)
     1. [Mapper默认获取配置](https://github.com/KnowsHow/mybatis/blob/master/doc/Mapper解析/Mapper默认获取配置.md)
     2. [Mapper自定义获取配置](https://github.com/KnowsHow/mybatis/blob/master/doc/Mapper解析/Mapper自定义获取配置.md)
     3. [Mapper从Spring到Mybatis](https://github.com/KnowsHow/mybatis/blob/master/doc/Mapper解析/Mapper从Spring到Mybatis.md)
@@ -11,7 +12,12 @@ doc
        1. [注解之ResultMap注册](https://github.com/KnowsHow/mybatis/blob/master/doc/Mapper解析/Mapper组件/注解之ResultMap注册.md)
        2. [注解之SQL语句注册](https://github.com/KnowsHow/mybatis/blob/master/doc/Mapper解析/Mapper组件/注解之SQL语句注册.md)
     6. [Mapper代理对象的方法调用](https://github.com/KnowsHow/mybatis/blob/master/doc/Mapper解析/Mapper代理对象的方法调用.md)
-
+* 配置对象
+    1. [注册器之Java类别名注册](https://github.com/KnowsHow/mybatis/blob/master/doc/Configuration/注册器之Java类别名注册.md)
+    1. [注册器之Mapper对象注册](https://github.com/KnowsHow/mybatis/blob/master/doc/Configuration/注册器之Mapper对象注册.md)
+    1. [注册器之映射关系处理器注册](https://github.com/KnowsHow/mybatis/blob/master/doc/Configuration/注册器之映射关系处理器注册.md)
+    1. [注册器之语言驱动注册](https://github.com/KnowsHow/mybatis/blob/master/doc/Configuration/注册器之语言驱动注册.md)
+    1. [解析器之Mapper对象的方法参数解析](https://github.com/KnowsHow/mybatis/blob/master/doc/Configuration/解析器之Mapper对象的方法参数解析.md)
 * 相关功能
     1. [基于注解的配置上下文](https://github.com/KnowsHow/mybatis/blob/master/doc/相关功能/基于注解的配置上下文.md)
     2. [BeanDefinition读取器](https://github.com/KnowsHow/mybatis/blob/master/doc/相关功能/BeanDefinition读取器.md)
