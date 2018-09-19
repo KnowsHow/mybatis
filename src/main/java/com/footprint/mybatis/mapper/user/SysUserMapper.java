@@ -1,8 +1,7 @@
 package com.footprint.mybatis.mapper.user;
 
 import com.footprint.mybatis.pojo.dto.SysUserDto;
-import org.apache.ibatis.annotations.Mapper;
-import org.apache.ibatis.annotations.Param;
+import org.apache.ibatis.annotations.*;
 import org.springframework.stereotype.Repository;
 
 /**
@@ -15,4 +14,17 @@ import org.springframework.stereotype.Repository;
 public interface SysUserMapper {
 
     SysUserDto findById(@Param("id") String id);
+
+    @Select("")
+    @Options
+    @ResultMap("xxx.xxxMap")
+    @TypeDiscriminator(
+            javaType = int.class,
+            column = "id",
+            cases = {
+            @Case(value = "1",type = int.class,results = {
+
+            })
+    })
+    SysUserDto findByUsername(@Param("username") String username);
 }

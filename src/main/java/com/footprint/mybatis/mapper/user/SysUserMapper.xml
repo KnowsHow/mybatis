@@ -4,6 +4,20 @@
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.footprint.mybatis.mapper.user.SysUserMapper">
 
+    <resultMap id="employeeMap" type="com.ykzhen2015.csdn.pojo.Employee">
+        <id property="id" column="id" />
+        <result property="empName" column="emp_name" />
+        <result property="sex" column="sex" />
+        <association property="employeeCard" column="id"
+                     select="com.ykzhen2015.csdn.mapper.EmployeeCardMapper.getEmployeeCardByEmpId" />
+        <collection property="projectList" column="id"
+                    select="com.ykzhen2015.csdn.mapper.ProjectMapper.findProjectByEmpId" />
+        <discriminator javaType="int" column="sex">
+            <case value="1" resultMap="maleEmployeeMap" />
+            <case value="2" resultMap="femaleEmployeeMap" />
+        </discriminator>
+    </resultMap>
+
 
     <select id="findById" resultType="com.footprint.mybatis.pojo.dto.SysUserDto">
         select

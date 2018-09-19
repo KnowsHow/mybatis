@@ -1,4 +1,4 @@
-## MapperRegistry:用于注册Mapper接口
+## MapperRegistry:用于注册Mapper对象得总入口
 
 ```java
 public class MapperRegistry {
@@ -95,8 +95,15 @@ public class MapperRegistry {
 
 }
 ```
+#### 来源说明
 
-#### 说明
+1. 通过XML配置文件构建Configuration对象并配置了mapper节点时会进行解析出Class、packageName
+2. 通过Java配置构建Configuration对象并指定mapperLocations时会进行解析出Class、packageName
+3. 通过Spring的BeanDefinition构建为Class
+4. 最终通过MapperRegistry不同的注册方式来解析Class、packageName和注解并构建为Mapper代理对象
+5. Configuration持有MapperRegistry实例,因此也可以完成注册
+
+#### 解析说明
 1. 注册实质为存储在Map<Class<?>, MapperProxyFactory<?>> knownMappers中
     * key=Mapper.class
     * value=MapperProxyFactory

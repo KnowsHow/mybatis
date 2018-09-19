@@ -1,56 +1,17 @@
-## Mapper的代理工厂、代理调用处理器、方法对象的解析
+## Mapper真实对象的方法调用
 
 
-#### Mapper的代理工厂:MapperProxyFactory
+#### 代理模式简单说明
 
-```java
-public class MapperProxyFactory<T> {
+* Mapper代理工厂采用JDK动态代理,
+    1. 代理类为:MapperProxyFactory.newInstance(sqlSession)
+    2. 委托类为:Mapper接口
+    3. 调用处理器为:MapperProxy
+* 代理类与委托类有同样的接口
+    * 当调用代理类的方法时会执行调用处理器的invoke方法
+    * 即当调用Mapper代理类的方法时会执行MapperProxy的invoke方法
 
-  /**
-   * @desc: 代理的类Class
-   */
-  private final Class<T> mapperInterface;
-
-  /**
-   * @desc: 代理类的方法级别的存储
-   */
-  private final Map<Method, MapperMethod> methodCache = new ConcurrentHashMap<Method, MapperMethod>();
-
-  /**
-   * @desc: 构造器(代理类Class)
-   */
-  public MapperProxyFactory(Class<T> mapperInterface) {
-    this.mapperInterface = mapperInterface;
-  }
-
-  public Class<T> getMapperInterface() {
-    return mapperInterface;
-  }
-
-  public Map<Method, MapperMethod> getMethodCache() {
-    return methodCache;
-  }
-
-  /**
-   * @desc: 产生实例(MapperProxy)
-   */
-  @SuppressWarnings("unchecked")
-  protected T newInstance(MapperProxy<T> mapperProxy) {
-    return (T) Proxy.newProxyInstance(mapperInterface.getClassLoader(), new Class[] { mapperInterface }, mapperProxy);
-  }
-
-  /**
-   * @desc: 产生实例(SqlSession)
-   */
-  public T newInstance(SqlSession sqlSession) {
-    final MapperProxy<T> mapperProxy = new MapperProxy<T>(sqlSession, mapperInterface, methodCache);
-    return newInstance(mapperProxy);
-  }
-
-}
-```
-
-#### Mapper代理的调用处理器:MapperProxy
+#### 调用处理器:MapperProxy
 
 ```java
 public class MapperProxy<T> implements InvocationHandler, Serializable {
@@ -141,7 +102,7 @@ public class MapperProxy<T> implements InvocationHandler, Serializable {
 }
 ```
 
-#### Mapper的方法对象:MapperMethod
+#### 方法对象:MapperMethod
 
 ```java
 public class MapperMethod {
@@ -586,3 +547,39 @@ public class MapperMethod {
 
 }
 ```
+
+#### 说明
+1. MethodSignature:Mapper方法描述的抽象
+    1. 解析返回结果类型
+        * void
+        * 多条结果
+        * Map
+        * 游标
+        * ResultMap
+    2. 解析返回对象的Java类型
+        * Class
+    3. 解析特殊参数
+        * 分页对象
+        * 类型处理器
+    4. 解析普通参数
+        * 参数名称多维解析
+2. SqlCommand: 数据库DML、DQL语言模式的抽象
+    1. SQL类型
+        * INSERT
+        * UPDATE
+        * DELETE
+        * SELECT
+        * FLUSH
+        * UNKNOWN
+    2. SQL语句
+        * 指定方法的SQL语句
+3. MapperMethod: Mapper方法的抽象
+    * 方法的执行结果集处理
+        * void
+        * int
+        * long
+        * boolean
+        * Array
+        * Collection
+        * Map
+        * Cursor
