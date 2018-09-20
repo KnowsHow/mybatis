@@ -4,29 +4,34 @@
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.footprint.mybatis.mapper.user.SysUserMapper">
 
-    <resultMap id="employeeMap" type="com.ykzhen2015.csdn.pojo.Employee">
-        <id property="id" column="id" />
-        <result property="empName" column="emp_name" />
-        <result property="sex" column="sex" />
-        <association property="employeeCard" column="id"
-                     select="com.ykzhen2015.csdn.mapper.EmployeeCardMapper.getEmployeeCardByEmpId" />
-        <collection property="projectList" column="id"
-                    select="com.ykzhen2015.csdn.mapper.ProjectMapper.findProjectByEmpId" />
-        <discriminator javaType="int" column="sex">
-            <case value="1" resultMap="maleEmployeeMap" />
-            <case value="2" resultMap="femaleEmployeeMap" />
-        </discriminator>
-    </resultMap>
+    <!--<resultMap id="null" type="com.footprint.mybatis.pojo.dto.SysUserDto">-->
+        <!--<constructor>-->
+            <!--<idArg/>-->
+            <!--<arg/>-->
+        <!--</constructor>-->
+        <!--<id/>-->
+        <!--<result/>-->
+        <!--<association property=""/>-->
+        <!--<collection property=""/>-->
+        <!--<discriminator javaType="">-->
+            <!--<case value=""></case>-->
+        <!--</discriminator>-->
+    <!--</resultMap>-->
 
+    <sql id="a">
+        username,
+        nickname,
+        password,
+        avatar,
+        reamrk
+    </sql>
 
     <select id="findById" resultType="com.footprint.mybatis.pojo.dto.SysUserDto">
         select
             id,
-            username,
-            nickname,
-            password,
-            avatar,
-            reamrk
+        <include refid="a">
+            <property name="" value=""    ></property>
+        </include>
         from sys_user su
         where id=#{id}
     </select>
