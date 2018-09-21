@@ -1,5 +1,8 @@
-## Mapper真实对象的方法调用
+## Mapper的调用
 
+1. Mapper的获取得到Mapper的代理对象
+2. 代理对象调用方法
+3. 触发Mapper的真正SQL执行,执行位置MapperMethod#execute
 
 #### 代理模式简单说明
 
