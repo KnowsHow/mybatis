@@ -15,16 +15,4 @@ public interface SysUserMapper {
 
     SysUserDto findById(@Param("id") String id);
 
-    @Select("")
-    @Options
-    @ResultMap("xxx.xxxMap")
-    @TypeDiscriminator(
-            javaType = int.class,
-            column = "id",
-            cases = {
-            @Case(value = "1",type = int.class,results = {
-
-            })
-    })
-    SysUserDto findByUsername(@Param("username") String username);
 }

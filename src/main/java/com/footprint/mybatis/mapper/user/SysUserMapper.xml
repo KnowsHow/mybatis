@@ -4,26 +4,16 @@
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.footprint.mybatis.mapper.user.SysUserMapper">
 
-    <!--<resultMap id="null" type="com.footprint.mybatis.pojo.dto.SysUserDto">-->
-        <!--<constructor>-->
-            <!--<idArg/>-->
-            <!--<arg/>-->
-        <!--</constructor>-->
-        <!--<id/>-->
-        <!--<result/>-->
-        <!--<association property=""/>-->
-        <!--<collection property=""/>-->
-        <!--<discriminator javaType="">-->
-            <!--<case value=""></case>-->
-        <!--</discriminator>-->
-    <!--</resultMap>-->
 
-    <sql id="a">
-        username,
-        nickname,
+    <sql id="b">
         password,
         avatar,
         reamrk
+    </sql>
+    <sql id="a">
+        username,
+        nickname,
+        <include refid="b"></include>
     </sql>
 
     <select id="findById" resultType="com.footprint.mybatis.pojo.dto.SysUserDto">
@@ -34,5 +24,11 @@
         </include>
         from sys_user su
         where id=#{id}
+        <if test="id eq null">
+           AND  id=${id}
+        </if>
+        <if test="id neq null ">
+           AND id=${id}
+        </if>
     </select>
 </mapper>
