@@ -1,58 +1,18 @@
-## insert语句使用BatchExecutor的执行逻辑说明
+##  SQL语句处理器:StatementHandler
 
-#### 执行器的调用
+#### 构建说明:Configuration#newStatementHandler
 
 ```java
-  @Override
-  public int doUpdate(MappedStatement ms, Object parameterObject) throws SQLException {
-    final Configuration configuration = ms.getConfiguration();
-    // @desc: 获取StatementHandler
-    final StatementHandler handler = configuration.newStatementHandler(this, ms, parameterObject, RowBounds.DEFAULT, null, null);
-    final BoundSql boundSql = handler.getBoundSql();
-    // @desc: 获取要执行的Sql
-    final String sql = boundSql.getSql();
-    final Statement stmt;
-
-    // @desc: 执行的sql和上次执行的一致
-    if (sql.equals(currentSql) && ms.equals(currentStatement)) {
-      // @desc: 计当前次数
-      int last = statementList.size() - 1;
-      // @desc: 获取当前Statement
-      stmt = statementList.get(last);
-      // @desc: 事务处理
-      applyTransactionTimeout(stmt);
-      // @desc: 参数化
-      handler.parameterize(stmt);//fix Issues 322
-      // @desc: 获取本次的执行结果
-      BatchResult batchResult = batchResultList.get(last);
-      // @desc: 设置参数对象
-      batchResult.addParameterObject(parameterObject);
-
-    // @desc: 首次执行
-    } else {
-      // @desc: 获取数据库连接
-      Connection connection = getConnection(ms.getStatementLog());
-      // @desc: 处理器预处理
-      stmt = handler.prepare(connection, transaction.getTimeout());
-      // @desc: 处理器参数化
-      handler.parameterize(stmt);    //fix Issues 322
-      // @desc: 设置当前执行的sql
-      currentSql = sql;
-      // @desc: 设置当前执行的Statement
-      currentStatement = ms;
-      // @desc: Statement添加到ArrayList中
-      statementList.add(stmt);
-      // @desc: BatchResult添加到ArrayList中
-      batchResultList.add(new BatchResult(ms, sql, parameterObject));
-    }
-    // @desc: 执行批处理
-    handler.batch(stmt);
-    // @desc: 返回可执行的批处理最大条数
-    return BATCH_UPDATE_RETURN_VALUE;
+  public StatementHandler newStatementHandler(Executor executor, MappedStatement mappedStatement, Object parameterObject, RowBounds rowBounds, ResultHandler resultHandler, BoundSql boundSql) {
+    // @desc: 构建路由类型处理器
+    StatementHandler statementHandler = new RoutingStatementHandler(executor, mappedStatement, parameterObject, rowBounds, resultHandler, boundSql);
+    // @desc: 处理插件
+    statementHandler = (StatementHandler) interceptorChain.pluginAll(statementHandler);
+    return statementHandler;
   }
 ```
 
-##### 处理器的初始化
+##### 路由类初始化
 
 ```java
   public RoutingStatementHandler(Executor executor, MappedStatement ms, Object parameter, RowBounds rowBounds, ResultHandler resultHandler, BoundSql boundSql) {
@@ -76,8 +36,7 @@
   }
 ```
 
-
-#### 委托处理器的初始化
+#### 委托类初始化
 
 ```java
   /**
@@ -86,7 +45,7 @@
    * mappedStatement SQL语句解析后的Java实体
    * parameterObject 参数对象
    * rowBounds 分页对象
-   * resultHandler 结果集处理器
+   * resultHandler 结果处理器
    * boundSql BoundSql对象
    */
   protected BaseStatementHandler(Executor executor, MappedStatement mappedStatement, Object parameterObject, RowBounds rowBounds, ResultHandler resultHandler, BoundSql boundSql) {
@@ -108,32 +67,17 @@
     // @desc: 结果集处理器
     this.resultSetHandler = configuration.newResultSetHandler(executor, mappedStatement, rowBounds, parameterHandler, resultHandler, boundSql);
   }
-```
 
-#### 处理器的调用
-
-```
-  @Override
-  public Statement prepare(Connection connection, Integer transactionTimeout) throws SQLException {
-    return delegate.prepare(connection, transactionTimeout);
+  /**
+   * @desc: 处理键生成器
+   */
+  protected void generateKeys(Object parameter) {
+    KeyGenerator keyGenerator = mappedStatement.getKeyGenerator();
+    ErrorContext.instance().store();
+    // @desc: 尝试执行Before类型的键生成
+    keyGenerator.processBefore(executor, mappedStatement, null, parameter);
+    ErrorContext.instance().recall();
   }
-
-  @Override
-  public void parameterize(Statement statement) throws SQLException {
-    delegate.parameterize(statement);
-  }
-
-  @Override
-  public void batch(Statement statement) throws SQLException {
-    delegate.batch(statement);
-  }
-
-```
-
-
-#### BaseStatementHandler#prepare
-
-```java
 
  /**
   * @desc: BaseStatementHandler已实现的prepare方法
@@ -163,7 +107,7 @@
    */
   protected abstract Statement instantiateStatement(Connection connection) throws SQLException;
 ```
-
+#### 委托类处理器调用
 
 #### 预编译类型:PreparedStatementHandler
 
@@ -194,15 +138,6 @@
     }
   }
 
-  /**
-   * @desc: 批处理
-   */
-  @Override
-  public void batch(Statement statement) throws SQLException {
-    PreparedStatement ps = (PreparedStatement) statement;
-    ps.addBatch();
-  }
-
  /**
   * @desc: 参数化
   */
@@ -212,8 +147,28 @@
     parameterHandler.setParameters((PreparedStatement) statement);
   }
 
-```
+  @Override
+  public int update(Statement statement) throws SQLException {
+    PreparedStatement ps = (PreparedStatement) statement;
+    ps.execute();
+    // @desc: 只获取影响的行数
+    int rows = ps.getUpdateCount();
+    Object parameterObject = boundSql.getParameterObject();
+    KeyGenerator keyGenerator = mappedStatement.getKeyGenerator();
+    // @desc: 键的后置处理:指定属性设置指定列的数据库返回值
+    keyGenerator.processAfter(executor, mappedStatement, ps, parameterObject);
+    return rows;
+  }
 
+  /**
+   * @desc: 批处理
+   */
+  @Override
+  public void batch(Statement statement) throws SQLException {
+    PreparedStatement ps = (PreparedStatement) statement;
+    ps.addBatch();
+  }
+```
 
 #### 简单类型:SimpleStatementHandler
 
@@ -233,11 +188,50 @@
   }
 
   /**
-   * @desc: 参数化
+   * @desc: SQL语句参数化
    */
   @Override
   public void parameterize(Statement statement) throws SQLException {
     // N/A
+  }
+
+  /**
+   * @desc: SQL语句执行
+   */
+  @Override
+  public int update(Statement statement) throws SQLException {
+    // @desc: 即将执行的Sql
+    String sql = boundSql.getSql();
+    // @desc: 封装在BoundSql中的参数变量
+    Object parameterObject = boundSql.getParameterObject();
+    // @desc: 键生成器
+    KeyGenerator keyGenerator = mappedStatement.getKeyGenerator();
+    int rows;
+    // @desc: Jdbc3KeyGenerator:数据库自增的键生成器
+    if (keyGenerator instanceof Jdbc3KeyGenerator) {
+      // @desc: 先执行
+      statement.execute(sql, Statement.RETURN_GENERATED_KEYS);
+      // @desc: 获取影响的行数
+      rows = statement.getUpdateCount();
+      // @desc: 键的后置处理:指定属性设置指定列的数据库返回值
+      keyGenerator.processAfter(executor, mappedStatement, statement, parameterObject);
+    // @desc: SelectKeyGenerator:执行SQL生成键的键生成器
+    } else if (keyGenerator instanceof SelectKeyGenerator) {
+      // @desc: 执行SQL
+      statement.execute(sql);
+      // @desc: 获取影响的行数
+      rows = statement.getUpdateCount();
+      // @desc: 键的后置处理:指定属性设置指定列的数据库返回值
+      keyGenerator.processAfter(executor, mappedStatement, statement, parameterObject);
+    // @desc: 其他类型或者NoKeyGenerator
+    } else {
+      // @desc: 执行SQL
+      statement.execute(sql);
+      // @desc: 获取影响行数
+      rows = statement.getUpdateCount();
+    }
+    // @desc: 返回执行SQL后影响的行数
+    return rows;
   }
 
   /**
@@ -279,6 +273,22 @@
     parameterHandler.setParameters((CallableStatement) statement);
   }
 
+  @Override
+  public int update(Statement statement) throws SQLException {
+    CallableStatement cs = (CallableStatement) statement;
+    cs.execute();
+    // @desc: 获取影响行数
+    int rows = cs.getUpdateCount();
+    Object parameterObject = boundSql.getParameterObject();
+    KeyGenerator keyGenerator = mappedStatement.getKeyGenerator();
+    // @desc: 键生成器后置处理
+    keyGenerator.processAfter(executor, mappedStatement, cs, parameterObject);
+    // @desc: 存储过程参数处理
+    resultSetHandler.handleOutputParameters(cs);
+    // @desc: 返回影响的行数
+    return rows;
+  }
+
   /**
    * @desc: 批处理
    */
@@ -288,3 +298,39 @@
     cs.addBatch();
   }
 ```
+
+####  总结
+* 批处理
+    1. 只能执行增删改操作
+    2. 返回值只是批处理执行的最大条数与执行的SQL语句无关
+    3. 能复用重复的sql
+* 其他
+    1. 配置了二级缓存则在操作之前清空二级缓存
+    2. 清空一级缓存
+    3. 获取配置对象Configuration
+    2. 配置对象构建StatementHandler:路由类型处理器
+    3. 根据statementType构建对应的委托类处理器
+    4. 构建中完成statementHandler属性配置
+        * 键生成器前置调用
+        * 构建参数处理器
+        * 构建结果集处理器
+        * 获取类型处理器
+    5. 处理插件
+    6. 获取数据库连接
+        * 复用型执行器复用成功直接进行到调用处理器的parameterize方法
+    7. 调用处理器的prepare方法
+        * 非简单类型的处理器会在这里预编译SQL
+        * 处理数据库键与指定的ResultSetType
+    8. 调用处理器的parameterize方法
+        * 非简单类型设置预编译中的参数
+        * 简单类型无预编译因此这里为空实现
+    9. 执行SQL语句
+        * 执行SQL
+    11. 键生成器后置调用
+    11. 存储过程参数处理
+    12. 返回受影响的行数
+    12. 关闭连接
+
+
+
+

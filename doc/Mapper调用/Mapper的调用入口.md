@@ -209,117 +209,11 @@ public class MapperMethod {
     return result;
   }
 
-  /**
-   * @desc: 无返回类型查询语句的处理
-   */
-  private void executeWithResultHandler(SqlSession sqlSession, Object[] args) {
-    MappedStatement ms = sqlSession.getConfiguration().getMappedStatement(command.getName());
-    // @desc: 非存储过程类型SQL必须含有ResultMap或者ResultType属性或注解
-    if (!StatementType.CALLABLE.equals(ms.getStatementType())
-        && void.class.equals(ms.getResultMaps().get(0).getType())) {
-      throw new BindingException("method " + command.getName()
-          + " needs either a @ResultMap annotation, a @ResultType annotation,"
-          + " or a resultType attribute in XML so a ResultHandler can be used as a parameter.");
-    }
-    // @desc: 参数转换
-    Object param = method.convertArgsToSqlCommandParam(args);
-    // @desc: 分页处理
-    if (method.hasRowBounds()) {
-      RowBounds rowBounds = method.extractRowBounds(args);
-      sqlSession.select(command.getName(), param, rowBounds, method.extractResultHandler(args));
-    } else {
-      sqlSession.select(command.getName(), param, method.extractResultHandler(args));
-    }
-  }
 
-  /**
-   * @desc: 返回集合的查询语句处理
-   */
-  private <E> Object executeForMany(SqlSession sqlSession, Object[] args) {
-    List<E> result;
-    // @desc: 参数解析和分页处理
-    Object param = method.convertArgsToSqlCommandParam(args);
-    if (method.hasRowBounds()) {
-      RowBounds rowBounds = method.extractRowBounds(args);
-      result = sqlSession.<E>selectList(command.getName(), param, rowBounds);
-    } else {
-      result = sqlSession.<E>selectList(command.getName(), param);
-    }
-    // issue #510 Collections & arrays support
 
-    if (!method.getReturnType().isAssignableFrom(result.getClass())) {
-      // @desc: Array数组处理
-      if (method.getReturnType().isArray()) {
-        return convertToArray(result);
-      // @desc: Collection集合处理
-      } else {
-        return convertToDeclaredCollection(sqlSession.getConfiguration(), result);
-      }
-    }
-    return result;
-  }
-  /**
-   * @desc: 返回游标类型的查询语句
-   */
-  private <T> Cursor<T> executeForCursor(SqlSession sqlSession, Object[] args) {
-    Cursor<T> result;
-    Object param = method.convertArgsToSqlCommandParam(args);
-    if (method.hasRowBounds()) {
-      RowBounds rowBounds = method.extractRowBounds(args);
-      result = sqlSession.<T>selectCursor(command.getName(), param, rowBounds);
-    } else {
-      result = sqlSession.<T>selectCursor(command.getName(), param);
-    }
-    return result;
-  }
 
-  /**
-   * @desc: 将结果集转为集合类型
-   */
-  private <E> Object convertToDeclaredCollection(Configuration config, List<E> list) {
-    // @desc: 使用对象工厂获取集合实例
-    Object collection = config.getObjectFactory().create(method.getReturnType());
-    // @desc: 构建MetaObject
-    MetaObject metaObject = config.newMetaObject(collection);
-    // @desc: 集合元素封装
-    metaObject.addAll(list);
-    return collection;
-  }
 
-  /**
-   * @desc: 将结果集转为数组类型
-   */
-  @SuppressWarnings("unchecked")
-  private <E> Object convertToArray(List<E> list) {
-    Class<?> arrayComponentType = method.getReturnType().getComponentType();
-    // @desc: 构建数组实例
-    Object array = Array.newInstance(arrayComponentType, list.size());
-    // @desc: 数组类型是基础类型的数组
-    if (arrayComponentType.isPrimitive()) {
-      for (int i = 0; i < list.size(); i++) {
-        Array.set(array, i, list.get(i));
-      }
-      return array;
-    // @desc: 数组类型是对象类型的数组
-    } else {
-      return list.toArray((E[])array);
-    }
-  }
 
-  /**
-   * @desc: 返回类型为Map的查询语句
-   */
-  private <K, V> Map<K, V> executeForMap(SqlSession sqlSession, Object[] args) {
-    Map<K, V> result;
-    Object param = method.convertArgsToSqlCommandParam(args);
-    if (method.hasRowBounds()) {
-      RowBounds rowBounds = method.extractRowBounds(args);
-      result = sqlSession.<K, V>selectMap(command.getName(), param, method.getMapKey(), rowBounds);
-    } else {
-      result = sqlSession.<K, V>selectMap(command.getName(), param, method.getMapKey());
-    }
-    return result;
-  }
 
   /**
    * @desc: 特殊类型ParamMap

@@ -1,40 +1,18 @@
-## insert语句使用SimpleExecutor的执行逻辑说明
+##  SQL语句处理器:StatementHandler
 
-#### 执行器的调用
+#### 构建说明:Configuration#newStatementHandler
 
 ```java
-  @Override
-  public int doUpdate(MappedStatement ms, Object parameter) throws SQLException {
-    Statement stmt = null;
-    try {
-      Configuration configuration = ms.getConfiguration();
-      // @desc: 获取StatementHandler
-      StatementHandler handler = configuration.newStatementHandler(this, ms, parameter, RowBounds.DEFAULT, null, null);
-      // @desc: 预处理SQL语句
-      stmt = prepareStatement(handler, ms.getStatementLog());
-      // @desc: 处理器处理SQL语句
-      return handler.update(stmt);
-    } finally {
-      closeStatement(stmt);
-    }
-  }
-
-  /**
-   * @desc: 预处理
-   */
-  private Statement prepareStatement(StatementHandler handler, Log statementLog) throws SQLException {
-    Statement stmt;
-    Connection connection = getConnection(statementLog);
-    // @desc: 调用初始化SQL语句、尝试使用键的Before生成、启用超时时间、启用受影响的最大行数,该方法为父类公共方法
-    stmt = handler.prepare(connection, transaction.getTimeout());
-    // @desc: 调用具体子类的参数化流程
-    handler.parameterize(stmt);
-    return stmt;
+  public StatementHandler newStatementHandler(Executor executor, MappedStatement mappedStatement, Object parameterObject, RowBounds rowBounds, ResultHandler resultHandler, BoundSql boundSql) {
+    // @desc: 构建路由类型处理器
+    StatementHandler statementHandler = new RoutingStatementHandler(executor, mappedStatement, parameterObject, rowBounds, resultHandler, boundSql);
+    // @desc: 处理插件
+    statementHandler = (StatementHandler) interceptorChain.pluginAll(statementHandler);
+    return statementHandler;
   }
 ```
 
-
-##### 处理器的初始化
+##### 路由类初始化
 
 ```java
   public RoutingStatementHandler(Executor executor, MappedStatement ms, Object parameter, RowBounds rowBounds, ResultHandler resultHandler, BoundSql boundSql) {
@@ -58,7 +36,7 @@
   }
 ```
 
-#### 委托处理器的初始化
+#### 委托类初始化
 
 ```java
   /**
@@ -67,7 +45,7 @@
    * mappedStatement SQL语句解析后的Java实体
    * parameterObject 参数对象
    * rowBounds 分页对象
-   * resultHandler 结果集处理器
+   * resultHandler 结果处理器
    * boundSql BoundSql对象
    */
   protected BaseStatementHandler(Executor executor, MappedStatement mappedStatement, Object parameterObject, RowBounds rowBounds, ResultHandler resultHandler, BoundSql boundSql) {
@@ -89,32 +67,17 @@
     // @desc: 结果集处理器
     this.resultSetHandler = configuration.newResultSetHandler(executor, mappedStatement, rowBounds, parameterHandler, resultHandler, boundSql);
   }
-```
 
-
-#### 处理器的调用
-
-```
-  @Override
-  public Statement prepare(Connection connection, Integer transactionTimeout) throws SQLException {
-    return delegate.prepare(connection, transactionTimeout);
+  /**
+   * @desc: 处理键生成器
+   */
+  protected void generateKeys(Object parameter) {
+    KeyGenerator keyGenerator = mappedStatement.getKeyGenerator();
+    ErrorContext.instance().store();
+    // @desc: 尝试执行Before类型的键生成
+    keyGenerator.processBefore(executor, mappedStatement, null, parameter);
+    ErrorContext.instance().recall();
   }
-
-  @Override
-  public void parameterize(Statement statement) throws SQLException {
-    delegate.parameterize(statement);
-  }
-
-  @Override
-  public int update(Statement statement) throws SQLException {
-    return delegate.update(statement);
-  }
-```
-
-
-#### BaseStatementHandler#prepare
-
-```java
 
  /**
   * @desc: BaseStatementHandler已实现的prepare方法
@@ -144,8 +107,9 @@
    */
   protected abstract Statement instantiateStatement(Connection connection) throws SQLException;
 ```
+#### 委托类处理器调用
 
-#### 预编译类型:PreparedStatementHandler
+##### 预编译类型:PreparedStatementHandler
 
 ```java
 
@@ -159,10 +123,12 @@
     // @desc: 数据库自增键
     if (mappedStatement.getKeyGenerator() instanceof Jdbc3KeyGenerator) {
       String[] keyColumnNames = mappedStatement.getKeyColumns();
-      // @desc: 执行自动生成键
+      // @desc: 执行数据库键
       if (keyColumnNames == null) {
+        // @desc: 执行预编译的sql
         return connection.prepareStatement(sql, PreparedStatement.RETURN_GENERATED_KEYS);
       } else {
+        // @desc: 执行预编译的sql,指定数据库键
         return connection.prepareStatement(sql, keyColumnNames);
       }
     // @desc: 非数据库自增键且指定ResultSetType
@@ -182,22 +148,26 @@
     // @desc: 参数处理器设置参数
     parameterHandler.setParameters((PreparedStatement) statement);
   }
-
   @Override
-  public int update(Statement statement) throws SQLException {
+  public <E> List<E> query(Statement statement, ResultHandler resultHandler) throws SQLException {
     PreparedStatement ps = (PreparedStatement) statement;
     ps.execute();
-    // @desc: 只获取影响的行数
-    int rows = ps.getUpdateCount();
-    Object parameterObject = boundSql.getParameterObject();
-    KeyGenerator keyGenerator = mappedStatement.getKeyGenerator();
-    // @desc: 键的后置处理:指定属性设置指定列的数据库返回值
-    keyGenerator.processAfter(executor, mappedStatement, ps, parameterObject);
-    return rows;
+    return resultSetHandler.<E> handleResultSets(ps);
+  }
+
+  @Override
+  public <E> Cursor<E> queryCursor(Statement statement) throws SQLException {
+    PreparedStatement ps = (PreparedStatement) statement;
+    ps.execute();
+    return resultSetHandler.<E> handleCursorResultSets(ps);
   }
 ```
+##### 说明
 
-#### 简单类型:SimpleStatementHandler
+1. 执行statement
+2. 调用初始化时注册的resultSetHandler处理结果集
+
+##### 简单类型:SimpleStatementHandler
 
 ```java
 
@@ -222,47 +192,27 @@
     // N/A
   }
 
-  /**
-   * @desc: SQL语句执行
-   */
   @Override
-  public int update(Statement statement) throws SQLException {
-    // @desc: 即将执行的Sql
+  public <E> List<E> query(Statement statement, ResultHandler resultHandler) throws SQLException {
     String sql = boundSql.getSql();
-    // @desc: 封装在BoundSql中的参数变量
-    Object parameterObject = boundSql.getParameterObject();
-    // @desc: 键生成器
-    KeyGenerator keyGenerator = mappedStatement.getKeyGenerator();
-    int rows;
-    // @desc: Jdbc3KeyGenerator:数据库自增的键生成器
-    if (keyGenerator instanceof Jdbc3KeyGenerator) {
-      // @desc: 先执行
-      statement.execute(sql, Statement.RETURN_GENERATED_KEYS);
-      // @desc: 获取影响的行数
-      rows = statement.getUpdateCount();
-      // @desc: 键的后置处理:指定属性设置指定列的数据库返回值
-      keyGenerator.processAfter(executor, mappedStatement, statement, parameterObject);
-    // @desc: SelectKeyGenerator:执行SQL生成键的键生成器
-    } else if (keyGenerator instanceof SelectKeyGenerator) {
-      // @desc: 执行SQL
-      statement.execute(sql);
-      // @desc: 获取影响的行数
-      rows = statement.getUpdateCount();
-      // @desc: 键的后置处理:指定属性设置指定列的数据库返回值
-      keyGenerator.processAfter(executor, mappedStatement, statement, parameterObject);
-    // @desc: 其他类型或者NoKeyGenerator
-    } else {
-      // @desc: 执行SQL
-      statement.execute(sql);
-      // @desc: 获取影响行数
-      rows = statement.getUpdateCount();
-    }
-    // @desc: 返回执行SQL后影响的行数
-    return rows;
+    statement.execute(sql);
+    return resultSetHandler.<E>handleResultSets(statement);
+  }
+
+  @Override
+  public <E> Cursor<E> queryCursor(Statement statement) throws SQLException {
+    String sql = boundSql.getSql();
+    statement.execute(sql);
+    return resultSetHandler.<E>handleCursorResultSets(statement);
   }
 ```
 
-#### 存储过程类型:CallableStatementHandler
+##### 说明
+1. 获取要执行的sql
+2. 执行sql
+3. 调用初始化时注册的resultSetHandler处理结果集
+
+##### 存储过程类型:CallableStatementHandler
 
 ```java
 
@@ -271,7 +221,7 @@
    */
   @Override
   protected Statement instantiateStatement(Connection connection) throws SQLException {
-    // @desc: 获取Sql并执行
+    // @desc: 获取Sql并执行预处理SQL
     String sql = boundSql.getSql();
     if (mappedStatement.getResultSetType() != null) {
       return connection.prepareCall(sql, mappedStatement.getResultSetType().getValue(), ResultSet.CONCUR_READ_ONLY);
@@ -292,18 +242,50 @@
   }
 
   @Override
-  public int update(Statement statement) throws SQLException {
+  public <E> List<E> query(Statement statement, ResultHandler resultHandler) throws SQLException {
     CallableStatement cs = (CallableStatement) statement;
     cs.execute();
-    // @desc: 获取影响行数
-    int rows = cs.getUpdateCount();
-    Object parameterObject = boundSql.getParameterObject();
-    KeyGenerator keyGenerator = mappedStatement.getKeyGenerator();
-    // @desc: 键生成器后置处理
-    keyGenerator.processAfter(executor, mappedStatement, cs, parameterObject);
-    // @desc: 存储过程参数处理
+    List<E> resultList = resultSetHandler.<E>handleResultSets(cs);
     resultSetHandler.handleOutputParameters(cs);
-    // @desc: 返回影响的行数
-    return rows;
+    return resultList;
+  }
+
+  @Override
+  public <E> Cursor<E> queryCursor(Statement statement) throws SQLException {
+    CallableStatement cs = (CallableStatement) statement;
+    cs.execute();
+    Cursor<E> resultList = resultSetHandler.<E>handleCursorResultSets(cs);
+    resultSetHandler.handleOutputParameters(cs);
+    return resultList;
   }
 ```
+
+##### 说明
+1. 执行CallableStatement
+2. 调用初始化时注册的resultSetHandler处理结果集
+3. 调用初始化时注册的resultSetHandler处理存储过程的参数
+
+
+### 总结
+1. 从二级缓存中获取结果
+    * 存在则返回
+    * 不存在则继续
+1. 从MappedStatement中获取配置对象
+2. 配置对象构建StatementHandler:路由类型处理器
+3. 根据statementType构建对应的委托类处理器
+4. 构建中完成statementHandler属性配置
+5. 处理插件
+6. 获取数据库连接
+    * 复用型执行器复用成功直接进行到调用处理器的parameterize方法
+7. 调用处理器的prepare方法
+    * 非简单类型的处理器会在这里预编译SQL
+    * 处理数据库键与指定的ResultSetType
+8. 调用处理器的parameterize方法
+    * 非简单类型设置预编译中的参数
+    * 简单类型无预编译因此这里为空实现
+9. 执行SQL语句
+    *  执行SQL
+10. 结果集处理器处理
+11. 二级缓存开启则放入缓存
+11. 存储过程参数处理
+12. 关闭连接

@@ -5,6 +5,9 @@
 <mapper namespace="com.footprint.mybatis.mapper.user.SysUserMapper">
 
 
+    <resultMap id="ac" type="com.footprint.mybatis.pojo.dto.SysUserDto">
+        <result property="password" column="password"/>
+    </resultMap>
     <sql id="b">
         password,
         avatar,
@@ -17,7 +20,7 @@
     </sql>
 
 
-    <select id="findById" resultType="com.footprint.mybatis.pojo.dto.SysUserDto">
+    <select id="findById" resultType="com.footprint.mybatis.pojo.dto.SysUserDto" >
         select
             id,
         <include refid="a">
