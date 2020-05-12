@@ -137,7 +137,7 @@
                 <directory>src/main/java</directory>
                 <includes>
                     <include>**/*.xml</include>
-                    <!--<include>**/*.dtd</include>-->
+                    <include>**/*.dtd</include>
                 </includes>
             </resource>
         </resources>
