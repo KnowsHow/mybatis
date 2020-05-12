@@ -1,6 +1,6 @@
 
 server:
-  port: 8100
+  port: 8080
   servlet:
     context-path: /mybatis
 
@@ -10,7 +10,7 @@ spring:
   datasource:
       druid:
         username: root
-        password: 1234
+        password: 123456
         driver-class-name: com.mysql.jdbc.Driver
         url: jdbc:mysql://localhost:3306/mybatis?useUnicode=true&characterEncoding=utf8&useSSL=false
         db-type: mysql
@@ -33,6 +33,7 @@ spring:
 mybatis:
   configuration:
     map-underscore-to-camel-case: true
+  mapper-locations: com.footprint.mybatis.mapper.*
 logging:
   level.com.footprint.mybatis: debug
 

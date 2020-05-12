@@ -11,7 +11,7 @@
     <sql id="b">
         password,
         avatar,
-        reamrk
+        remark
     </sql>
     <sql id="a">
         username,

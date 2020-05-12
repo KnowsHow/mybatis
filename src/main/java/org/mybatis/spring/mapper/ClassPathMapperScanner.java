@@ -208,7 +208,7 @@ public class ClassPathMapperScanner extends ClassPathBeanDefinitionScanner {
             // but, the actual class of the bean is MapperFactoryBean
             // @desc: 设置构造器的通用参数:Mapper的全类名
             definition.getConstructorArgumentValues().addGenericArgumentValue(definition.getBeanClassName()); // issue #59
-            // @desc: 设置生成Bean的类：mapperFactoryBean
+            // @desc: 设置生成Bean的类：MapperFactoryBean
             definition.setBeanClass(this.mapperFactoryBean.getClass());
             // @desc: 设置普通属性addToConfig的值:默认true
             definition.getPropertyValues().add("addToConfig", this.addToConfig);
@@ -243,7 +243,7 @@ public class ClassPathMapperScanner extends ClassPathBeanDefinitionScanner {
                 if (logger.isDebugEnabled()) {
                     logger.debug("Enabling autowire by type for MapperFactoryBean with name '" + holder.getBeanName() + "'.");
                 }
-                // @desc: 设置@Autoware类型:根据类型注入
+                // @desc: 设置@Autowired类型:根据类型注入,这种Bean开发人员不用@Autowired即可完成注入
                 definition.setAutowireMode(AbstractBeanDefinition.AUTOWIRE_BY_TYPE);
             }
             /**

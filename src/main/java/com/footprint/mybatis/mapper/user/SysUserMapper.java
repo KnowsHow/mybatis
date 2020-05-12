@@ -10,7 +10,6 @@ import org.springframework.stereotype.Repository;
  * @author: JiaHaiGang
  * @date: 2018/9/12 13:15
  */
-
 public interface SysUserMapper {
 
     SysUserDto findById(@Param("id") String id);
