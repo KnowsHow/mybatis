@@ -84,6 +84,7 @@ public abstract class BaseExecutor implements Executor {
   public void close(boolean forceRollback) {
     try {
       try {
+        // 调用rollback
         rollback(forceRollback);
       } finally {
         if (transaction != null) {
@@ -113,7 +114,9 @@ public abstract class BaseExecutor implements Executor {
     if (closed) {
       throw new ExecutorException("Executor was closed.");
     }
+    // 一律清空本地缓存
     clearLocalCache();
+    // 模板方法，子类实现
     return doUpdate(ms, parameter);
   }
 
@@ -132,6 +135,7 @@ public abstract class BaseExecutor implements Executor {
   @Override
   public <E> List<E> query(MappedStatement ms, Object parameter, RowBounds rowBounds, ResultHandler resultHandler) throws SQLException {
     BoundSql boundSql = ms.getBoundSql(parameter);
+    // 构建缓存的唯一主键key
     CacheKey key = createCacheKey(ms, parameter, rowBounds, boundSql);
     return query(ms, parameter, rowBounds, resultHandler, key, boundSql);
  }
@@ -143,27 +147,34 @@ public abstract class BaseExecutor implements Executor {
     if (closed) {
       throw new ExecutorException("Executor was closed.");
     }
+    // 查询栈=0 且 配置了 flushCache 则清除二级缓存
     if (queryStack == 0 && ms.isFlushCacheRequired()) {
       clearLocalCache();
     }
     List<E> list;
     try {
+      // 查询栈自增处理，对延迟加载处理
       queryStack++;
       list = resultHandler == null ? (List<E>) localCache.getObject(key) : null;
+      // 如果查询结果是从一级缓存中获取的，则处理存储过程的参数
       if (list != null) {
         handleLocallyCachedOutputParameters(ms, key, parameter, boundSql);
-      } else {
+      }
+      // 没有缓存则从数据库查询
+      else {
         list = queryFromDatabase(ms, parameter, rowBounds, resultHandler, key, boundSql);
       }
     } finally {
       queryStack--;
     }
     if (queryStack == 0) {
+      // 延迟加载
       for (DeferredLoad deferredLoad : deferredLoads) {
         deferredLoad.load();
       }
       // issue #601
       deferredLoads.clear();
+      // 一级缓存的作用域，如果是statement，则需要清除
       if (configuration.getLocalCacheScope() == LocalCacheScope.STATEMENT) {
         // issue #482
         clearLocalCache();
@@ -238,7 +249,9 @@ public abstract class BaseExecutor implements Executor {
     if (closed) {
       throw new ExecutorException("Cannot commit, transaction is already closed");
     }
+    // 清空一级缓存
     clearLocalCache();
+    // 处理缓存的Statement
     flushStatements();
     if (required) {
       transaction.commit();
@@ -261,6 +274,8 @@ public abstract class BaseExecutor implements Executor {
 
   @Override
   public void clearLocalCache() {
+    // 这里开始涉及缓存：Cache
+    // 执行器中的缓存为一级缓存
     if (!closed) {
       localCache.clear();
       localOutputParameterCache.clear();
@@ -323,11 +338,14 @@ public abstract class BaseExecutor implements Executor {
     List<E> list;
     localCache.putObject(key, EXECUTION_PLACEHOLDER);
     try {
+      // 具体的查询流程，模板方法，子类实现
       list = doQuery(ms, parameter, rowBounds, resultHandler, boundSql);
     } finally {
       localCache.removeObject(key);
     }
+    // 一级缓存
     localCache.putObject(key, list);
+    // 存储过程的参数缓存
     if (ms.getStatementType() == StatementType.CALLABLE) {
       localOutputParameterCache.putObject(key, parameter);
     }

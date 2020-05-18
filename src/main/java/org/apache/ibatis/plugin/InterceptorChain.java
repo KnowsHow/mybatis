@@ -24,8 +24,10 @@ import java.util.List;
  */
 public class InterceptorChain {
 
+  /** 插件列表*/
   private final List<Interceptor> interceptors = new ArrayList<Interceptor>();
 
+  /** 插件处理 */
   public Object pluginAll(Object target) {
     for (Interceptor interceptor : interceptors) {
       target = interceptor.plugin(target);
@@ -33,6 +35,7 @@ public class InterceptorChain {
     return target;
   }
 
+  /** 添加插件 */
   public void addInterceptor(Interceptor interceptor) {
     interceptors.add(interceptor);
   }

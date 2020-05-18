@@ -55,18 +55,22 @@ public abstract class BaseStatementHandler implements StatementHandler {
     this.executor = executor;
     this.mappedStatement = mappedStatement;
     this.rowBounds = rowBounds;
-
+    // 类型处理器的注册器
     this.typeHandlerRegistry = configuration.getTypeHandlerRegistry();
+    // 对象工厂
     this.objectFactory = configuration.getObjectFactory();
 
-    if (boundSql == null) { // issue #435, get the key before calculating the statement
+    // issue #435, get the key before calculating the statement
+    // 在statement处理之前先把主键生成的参数处理好
+    if (boundSql == null) {
       generateKeys(parameterObject);
       boundSql = mappedStatement.getBoundSql(parameterObject);
     }
 
     this.boundSql = boundSql;
-
+    // 参数处理器
     this.parameterHandler = configuration.newParameterHandler(mappedStatement, parameterObject, boundSql);
+    // 结果集处理器
     this.resultSetHandler = configuration.newResultSetHandler(executor, mappedStatement, rowBounds, parameterHandler, resultHandler, boundSql);
   }
 
@@ -85,8 +89,11 @@ public abstract class BaseStatementHandler implements StatementHandler {
     ErrorContext.instance().sql(boundSql.getSql());
     Statement statement = null;
     try {
+      // 实例化Statement，模板方法
       statement = instantiateStatement(connection);
+      // 设置超时时间
       setStatementTimeout(statement, transactionTimeout);
+      // 设置单次操作最大的数据库影响的行数
       setFetchSize(statement);
       return statement;
     } catch (SQLException e) {

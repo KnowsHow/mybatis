@@ -25,12 +25,16 @@ import java.sql.SQLException;
  */
 public interface TypeHandler<T> {
 
+  /** 设置参数 */
   void setParameter(PreparedStatement ps, int i, T parameter, JdbcType jdbcType) throws SQLException;
 
+  /** 根据数据库列名获取结果值 */
   T getResult(ResultSet rs, String columnName) throws SQLException;
 
+  /** 根据数据库列下标获取结果值 */
   T getResult(ResultSet rs, int columnIndex) throws SQLException;
 
+  /** 根据数据库列下标获取存储过程的结果值 ，主要用来处理OUT类型参数 */
   T getResult(CallableStatement cs, int columnIndex) throws SQLException;
 
 }

@@ -51,16 +51,20 @@ public class ParamNameResolver {
 
   public ParamNameResolver(Configuration config, Method method) {
     final Class<?>[] paramTypes = method.getParameterTypes();
+    // 获取参数列表上的注解，注：包含无注解参数和多注解参数，这是一个二维数组
     final Annotation[][] paramAnnotations = method.getParameterAnnotations();
     final SortedMap<Integer, String> map = new TreeMap<Integer, String>();
     int paramCount = paramAnnotations.length;
     // get names from @Param annotations
+    // 处理所有参数
     for (int paramIndex = 0; paramIndex < paramCount; paramIndex++) {
+      // 忽略分页对象和分页结果处理器
       if (isSpecialParameter(paramTypes[paramIndex])) {
         // skip special parameters
         continue;
       }
       String name = null;
+      // 处理带有@Param注解的参数
       for (Annotation annotation : paramAnnotations[paramIndex]) {
         if (annotation instanceof Param) {
           hasParamAnnotation = true;
@@ -68,11 +72,14 @@ public class ParamNameResolver {
           break;
         }
       }
+      // 未使用@Param的处理
       if (name == null) {
         // @Param was not specified.
+        // 使用参数自身的名称（默认开启）
         if (config.isUseActualParamName()) {
           name = getActualParamName(method, paramIndex);
         }
+        // 未开启则使用下标
         if (name == null) {
           // use the parameter index as the name ("0", "1", ...)
           // gcode issue #71
@@ -81,6 +88,7 @@ public class ParamNameResolver {
       }
       map.put(paramIndex, name);
     }
+    // 缓存起来
     names = Collections.unmodifiableSortedMap(map);
   }
 
@@ -114,14 +122,18 @@ public class ParamNameResolver {
     final int paramCount = names.size();
     if (args == null || paramCount == 0) {
       return null;
+    // 无@Param注解，且只有一个参数 ，直接获取参数中的第一个
     } else if (!hasParamAnnotation && paramCount == 1) {
       return args[names.firstKey()];
+    // 有@Param注解或者多个参数时，这里将原来key=index进行转换
     } else {
       final Map<String, Object> param = new ParamMap<Object>();
       int i = 0;
       for (Map.Entry<Integer, String> entry : names.entrySet()) {
+        // 第一次处理，结构 key=参数名称 value=参数名称
         param.put(entry.getValue(), args[entry.getKey()]);
         // add generic param names (param1, param2, ...)
+        // 第二次处理，k结构 key=param0 value=参数名称
         final String genericParamName = GENERIC_NAME_PREFIX + String.valueOf(i + 1);
         // ensure not to overwrite parameter named with @Param
         if (!names.containsValue(genericParamName)) {
@@ -129,6 +141,7 @@ public class ParamNameResolver {
         }
         i++;
       }
+      // 多参数或者无@Param注解的：最终结果，既包含原生参数名称也包含param0这种标准名称
       return param;
     }
   }

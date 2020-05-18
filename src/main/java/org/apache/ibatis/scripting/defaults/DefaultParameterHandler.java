@@ -68,21 +68,33 @@ public class DefaultParameterHandler implements ParameterHandler {
         if (parameterMapping.getMode() != ParameterMode.OUT) {
           Object value;
           String propertyName = parameterMapping.getProperty();
-          if (boundSql.hasAdditionalParameter(propertyName)) { // issue #448 ask first for additional params
+          // 确定参数是否是深度存在，例如 .属性 和 .属性[]
+          // issue #448 ask first for additional params
+          if (boundSql.hasAdditionalParameter(propertyName)) {
             value = boundSql.getAdditionalParameter(propertyName);
-          } else if (parameterObject == null) {
+          }
+          // Mapper方法是无参数方法
+          else if (parameterObject == null) {
             value = null;
-          } else if (typeHandlerRegistry.hasTypeHandler(parameterObject.getClass())) {
+          }
+          // Mapper存在参数，则针对当前的参数,从已注册类型处理器中获取来判断是否能被处理
+          else if (typeHandlerRegistry.hasTypeHandler(parameterObject.getClass())) {
             value = parameterObject;
-          } else {
+          }
+          // 不能处理的数据类型，则通过MetaObject对象获取
+          else {
             MetaObject metaObject = configuration.newMetaObject(parameterObject);
             value = metaObject.getValue(propertyName);
           }
+          // 类型处理器，这里能拿出来，说明在解析的时候就确定好了
           TypeHandler typeHandler = parameterMapping.getTypeHandler();
+          // 数据库类型
           JdbcType jdbcType = parameterMapping.getJdbcType();
+          // 参数值=null 且 数据库类型未指定，则设置null的jdbcType
           if (value == null && jdbcType == null) {
             jdbcType = configuration.getJdbcTypeForNull();
           }
+          // 类型处理器来处理每个参数，注意这个处理器，也是经常扩展的对象
           try {
             typeHandler.setParameter(ps, i + 1, value, jdbcType);
           } catch (TypeException e) {

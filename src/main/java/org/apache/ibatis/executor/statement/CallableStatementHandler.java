@@ -51,6 +51,7 @@ public class CallableStatementHandler extends BaseStatementHandler {
     Object parameterObject = boundSql.getParameterObject();
     KeyGenerator keyGenerator = mappedStatement.getKeyGenerator();
     keyGenerator.processAfter(executor, mappedStatement, cs, parameterObject);
+    // 处理OUT类型参数
     resultSetHandler.handleOutputParameters(cs);
     return rows;
   }
@@ -58,14 +59,18 @@ public class CallableStatementHandler extends BaseStatementHandler {
   @Override
   public void batch(Statement statement) throws SQLException {
     CallableStatement cs = (CallableStatement) statement;
+    // 核心
     cs.addBatch();
   }
 
   @Override
   public <E> List<E> query(Statement statement, ResultHandler resultHandler) throws SQLException {
     CallableStatement cs = (CallableStatement) statement;
+    // 执行
     cs.execute();
+    // 结果集处理
     List<E> resultList = resultSetHandler.<E>handleResultSets(cs);
+    // OUT参数处理
     resultSetHandler.handleOutputParameters(cs);
     return resultList;
   }
@@ -82,6 +87,7 @@ public class CallableStatementHandler extends BaseStatementHandler {
   @Override
   protected Statement instantiateStatement(Connection connection) throws SQLException {
     String sql = boundSql.getSql();
+    // 结果集
     if (mappedStatement.getResultSetType() != null) {
       return connection.prepareCall(sql, mappedStatement.getResultSetType().getValue(), ResultSet.CONCUR_READ_ONLY);
     } else {
@@ -91,7 +97,9 @@ public class CallableStatementHandler extends BaseStatementHandler {
 
   @Override
   public void parameterize(Statement statement) throws SQLException {
+    // 按照SQL规范，先注册参数
     registerOutputParameters((CallableStatement) statement);
+    // 设置参数
     parameterHandler.setParameters((CallableStatement) statement);
   }
 

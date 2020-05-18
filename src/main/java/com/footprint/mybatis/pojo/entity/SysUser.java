@@ -9,7 +9,9 @@ import lombok.Data;
  * @date: 2018/9/12 13:10
  */
 @Data
-public class SysUser {
+public class SysUser implements java.io.Serializable{
+
+    private static final long serialVersionUID = -8409324121632553916L;
 
     private String id;
 

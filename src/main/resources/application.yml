@@ -8,31 +8,19 @@ spring:
   application:
     name: mybatis
   datasource:
-      druid:
-        username: root
-        password: 123456
-        driver-class-name: com.mysql.jdbc.Driver
-        url: jdbc:mysql://localhost:3306/mybatis?useUnicode=true&characterEncoding=utf8&useSSL=false
-        db-type: mysql
-        initial-size: 1
-        min-idle: 3
-        max-active: 20
-        max-wait: 60000
-        time-between-eviction-runs-millis: 60000
-        min-evictable-idle-time-millis: 30000
-        validation-query: select 1
-        test-while-idle: true
-        test-on-borrow: false
-        test-on-return: false
-        pool-prepared-statements: true
-        max-pool-prepared-statement-per-connection-size: 20
-        filters: stat,wall,slf4j
-        connect-properties: druid.stat.mergeSql=true;druid.stat.slowSqlMillis=5000
-        use-global-data-source-stat: true
+    username: root
+    password: 123456
+    driver-class-name: com.mysql.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/mybatis?useUnicode=true&characterEncoding=utf8&useSSL=false&allowMultiQueries=true
 
 mybatis:
   configuration:
     map-underscore-to-camel-case: true
+    use-actual-param-name: false
+    default-executor-type: simple
+#    lazy-loading-enabled: true
+#    aggressive-lazy-loading: true
+    multiple-result-sets-enabled: true
   mapper-locations: com.footprint.mybatis.mapper.*
 logging:
   level.com.footprint.mybatis: debug

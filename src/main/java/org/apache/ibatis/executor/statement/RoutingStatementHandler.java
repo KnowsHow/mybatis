@@ -34,10 +34,11 @@ import org.apache.ibatis.session.RowBounds;
  */
 public class RoutingStatementHandler implements StatementHandler {
 
+  /** 持有一个具体的处理器 */
   private final StatementHandler delegate;
 
   public RoutingStatementHandler(Executor executor, MappedStatement ms, Object parameter, RowBounds rowBounds, ResultHandler resultHandler, BoundSql boundSql) {
-
+    // 策略模式
     switch (ms.getStatementType()) {
       case STATEMENT:
         delegate = new SimpleStatementHandler(executor, ms, parameter, rowBounds, resultHandler, boundSql);

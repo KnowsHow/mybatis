@@ -1,12 +1,10 @@
 package com.footprint.mybatis.web;
 
+import com.footprint.mybatis.pojo.SysUserVo;
 import com.footprint.mybatis.pojo.dto.SysUserDto;
 import com.footprint.mybatis.service.user.SysUserService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 /**
  * SysUserController
@@ -25,5 +23,20 @@ public class SysUserController {
     @GetMapping(value = "{id}")
     public SysUserDto findById(@PathVariable String id){
         return userService.findById(id);
+    }
+
+    @GetMapping(value = "/vo/{id}")
+    public SysUserVo selectVoById(@PathVariable String id){
+        return userService.selectVoById(id);
+    }
+
+    @GetMapping(value = "/one/{id}")
+    public SysUserDto selectOne(@PathVariable String id){
+        return userService.selectOne(id);
+    }
+
+    @PutMapping(value = "/{id}")
+    public int updateById(@PathVariable String id){
+        return userService.updateById(id);
     }
 }

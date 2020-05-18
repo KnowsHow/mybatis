@@ -56,6 +56,7 @@ public class BatchExecutor extends BaseExecutor {
     final Configuration configuration = ms.getConfiguration();
     final StatementHandler handler = configuration.newStatementHandler(this, ms, parameterObject, RowBounds.DEFAULT, null, null);
     final BoundSql boundSql = handler.getBoundSql();
+    // 该SQL为预处理语句：即带有占位符？的sql
     final String sql = boundSql.getSql();
     final Statement stmt;
     if (sql.equals(currentSql) && ms.equals(currentStatement)) {
@@ -84,6 +85,7 @@ public class BatchExecutor extends BaseExecutor {
       throws SQLException {
     Statement stmt = null;
     try {
+      // 清空缓存的statement
       flushStatements();
       Configuration configuration = ms.getConfiguration();
       StatementHandler handler = configuration.newStatementHandler(wrapper, ms, parameterObject, rowBounds, resultHandler, boundSql);
@@ -119,9 +121,11 @@ public class BatchExecutor extends BaseExecutor {
         applyTransactionTimeout(stmt);
         BatchResult batchResult = batchResultList.get(i);
         try {
+          // 注意：这里才真正提交SQL：stmt.executeBatch()
           batchResult.setUpdateCounts(stmt.executeBatch());
           MappedStatement ms = batchResult.getMappedStatement();
           List<Object> parameterObjects = batchResult.getParameterObjects();
+          // 主键生成的处理，将主键逐一设置到返回结果中
           KeyGenerator keyGenerator = ms.getKeyGenerator();
           if (Jdbc3KeyGenerator.class.equals(keyGenerator.getClass())) {
             Jdbc3KeyGenerator jdbc3KeyGenerator = (Jdbc3KeyGenerator) keyGenerator;
@@ -151,9 +155,11 @@ public class BatchExecutor extends BaseExecutor {
       }
       return results;
     } finally {
+      // 关闭预编译sql
       for (Statement stmt : statementList) {
         closeStatement(stmt);
       }
+      // 清空缓存
       currentSql = null;
       statementList.clear();
       batchResultList.clear();

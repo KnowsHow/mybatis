@@ -71,8 +71,10 @@ public class ReuseExecutor extends BaseExecutor {
   @Override
   public List<BatchResult> doFlushStatements(boolean isRollback) throws SQLException {
     for (Statement stmt : statementMap.values()) {
+      // 逐一关闭预编译SQL
       closeStatement(stmt);
     }
+    // 清空缓存
     statementMap.clear();
     return Collections.emptyList();
   }

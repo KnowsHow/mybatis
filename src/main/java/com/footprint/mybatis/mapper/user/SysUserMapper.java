@@ -1,6 +1,8 @@
 package com.footprint.mybatis.mapper.user;
 
+import com.footprint.mybatis.pojo.SysUserVo;
 import com.footprint.mybatis.pojo.dto.SysUserDto;
+import com.footprint.mybatis.pojo.entity.Book;
 import org.apache.ibatis.annotations.*;
 import org.springframework.stereotype.Repository;
 
@@ -12,6 +14,14 @@ import org.springframework.stereotype.Repository;
  */
 public interface SysUserMapper {
 
-    SysUserDto findById(@Param("id") String id);
+    SysUserDto findById(String id);
+
+    Book selectBookByUid(String uid);
+
+    SysUserVo selectVo(String id);
+
+    SysUserDto selectOne(@Param("id") String id,@Param("name") String name);
+
+    int updateById(@Param("id") String id,@Param("name") String name);
 
 }

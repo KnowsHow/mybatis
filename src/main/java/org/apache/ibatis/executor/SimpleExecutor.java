@@ -45,8 +45,11 @@ public class SimpleExecutor extends BaseExecutor {
     Statement stmt = null;
     try {
       Configuration configuration = ms.getConfiguration();
+      // 获取StatementHandler
       StatementHandler handler = configuration.newStatementHandler(this, ms, parameter, RowBounds.DEFAULT, null, null);
+      // 预处理语句
       stmt = prepareStatement(handler, ms.getStatementLog());
+      // handler处理
       return handler.update(stmt);
     } finally {
       closeStatement(stmt);
@@ -58,8 +61,11 @@ public class SimpleExecutor extends BaseExecutor {
     Statement stmt = null;
     try {
       Configuration configuration = ms.getConfiguration();
+      // @desc: 获取StatementHandler
       StatementHandler handler = configuration.newStatementHandler(wrapper, ms, parameter, rowBounds, resultHandler, boundSql);
+      // @desc: 预处理SQL语句
       stmt = prepareStatement(handler, ms.getStatementLog());
+      // @desc: 交给处理器query
       return handler.<E>query(stmt, resultHandler);
     } finally {
       closeStatement(stmt);
@@ -81,8 +87,11 @@ public class SimpleExecutor extends BaseExecutor {
 
   private Statement prepareStatement(StatementHandler handler, Log statementLog) throws SQLException {
     Statement stmt;
+    // 获取链接
     Connection connection = getConnection(statementLog);
+    // @desc: 调用初始化SQL语句、尝试使用键的Before生成、启用超时时间、启用受影响的最大行数,该方法为父类公共方法
     stmt = handler.prepare(connection, transaction.getTimeout());
+    // @desc: 调用具体子类的参数化流程
     handler.parameterize(stmt);
     return stmt;
   }

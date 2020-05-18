@@ -1,5 +1,6 @@
 package com.footprint.mybatis.service.user;
 
+import com.footprint.mybatis.pojo.SysUserVo;
 import com.footprint.mybatis.pojo.dto.SysUserDto;
 
 /**
@@ -11,4 +12,9 @@ import com.footprint.mybatis.pojo.dto.SysUserDto;
 public interface SysUserService {
 
     SysUserDto findById(String id);
+
+    SysUserDto selectOne(String id);
+    int updateById(String id);
+
+    SysUserVo selectVoById(String id);
 }

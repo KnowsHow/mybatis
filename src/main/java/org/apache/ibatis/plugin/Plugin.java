@@ -40,10 +40,13 @@ public class Plugin implements InvocationHandler {
     this.signatureMap = signatureMap;
   }
 
+  /** 将目标类型 包装为代理类 */
   public static Object wrap(Object target, Interceptor interceptor) {
+    // 获取插件签名信息
     Map<Class<?>, Set<Method>> signatureMap = getSignatureMap(interceptor);
     Class<?> type = target.getClass();
     Class<?>[] interfaces = getAllInterfaces(type, signatureMap);
+    // 使用JDK代理生成代理对象
     if (interfaces.length > 0) {
       return Proxy.newProxyInstance(
           type.getClassLoader(),
@@ -53,34 +56,44 @@ public class Plugin implements InvocationHandler {
     return target;
   }
 
+  /** 插件调用流程 */
   @Override
   public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
     try {
+      // 根据要处理的对象获取增强的方法列表
       Set<Method> methods = signatureMap.get(method.getDeclaringClass());
+      // 找到要增强的方法
       if (methods != null && methods.contains(method)) {
+        // 调用插件的intercept方法
         return interceptor.intercept(new Invocation(target, method, args));
       }
+      // 未增强的方法，调用插件对象的的原生方法
       return method.invoke(target, args);
     } catch (Exception e) {
       throw ExceptionUtil.unwrapThrowable(e);
     }
   }
 
+  /** 获取插件的签名信息 */
   private static Map<Class<?>, Set<Method>> getSignatureMap(Interceptor interceptor) {
+    // 只处理@Intercepts的插件类
     Intercepts interceptsAnnotation = interceptor.getClass().getAnnotation(Intercepts.class);
     // issue #251
     if (interceptsAnnotation == null) {
       throw new PluginException("No @Intercepts annotation was found in interceptor " + interceptor.getClass().getName());      
     }
+    // @Signature 注解列表
     Signature[] sigs = interceptsAnnotation.value();
     Map<Class<?>, Set<Method>> signatureMap = new HashMap<Class<?>, Set<Method>>();
     for (Signature sig : sigs) {
+      // 获取Signature#type 是一个Class类型，也就是Mybatis支持插件的对象，Map中value为拦截的方法列表
       Set<Method> methods = signatureMap.get(sig.type());
       if (methods == null) {
         methods = new HashSet<Method>();
         signatureMap.put(sig.type(), methods);
       }
       try {
+        // 配置要拦截的方法
         Method method = sig.type().getMethod(sig.method(), sig.args());
         methods.add(method);
       } catch (NoSuchMethodException e) {

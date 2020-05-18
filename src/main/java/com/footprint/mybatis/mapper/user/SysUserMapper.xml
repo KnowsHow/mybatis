@@ -8,6 +8,17 @@
     <resultMap id="ac" type="com.footprint.mybatis.pojo.dto.SysUserDto">
         <result property="password" column="password"/>
     </resultMap>
+
+    <resultMap id="lazyDemo" type="com.footprint.mybatis.pojo.SysUserVo">
+        <id column="id" jdbcType="INTEGER" property="id" />
+        <result property="password" column="password"/>
+        <result column="user_name" jdbcType="VARCHAR" property="username" />
+        <collection property="book" column="id" fetchType="lazy"
+                    select="com.footprint.mybatis.mapper.user.SysUserMapper.selectBookByUid">
+        </collection>
+    </resultMap>
+
+
     <sql id="b">
         password,
         avatar,
@@ -18,6 +29,10 @@
         nickname,
         <include refid="b"></include>
     </sql>
+
+    <select id="selectBookByUid" resultType="com.footprint.mybatis.pojo.entity.Book" >
+        select * from book where  uid=#{0}
+    </select>
 
 
     <select id="findById" resultType="com.footprint.mybatis.pojo.dto.SysUserDto" >
@@ -35,4 +50,16 @@
            AND id=${id}
         </if>
     </select>
+
+    <select id="selectVo" resultMap="lazyDemo">
+        select  id from sys_user where id=#{param1}
+    </select>
+
+    <select id="selectOne" resultType="com.footprint.mybatis.pojo.dto.SysUserDto">
+        select  id from sys_user where id=#{param1} and username=#{param2}
+    </select>
+
+    <update id="updateById" >
+      update sys_user set username=#{param2} where id=#{param1}
+    </update>
 </mapper>

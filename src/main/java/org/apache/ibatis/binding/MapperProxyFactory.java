@@ -30,6 +30,10 @@ public class MapperProxyFactory<T> {
   private final Class<T> mapperInterface;
   private final Map<Method, MapperMethod> methodCache = new ConcurrentHashMap<Method, MapperMethod>();
 
+  /**
+   * 指定代理的接口
+   * @param mapperInterface mapper接口
+   */
   public MapperProxyFactory(Class<T> mapperInterface) {
     this.mapperInterface = mapperInterface;
   }
@@ -42,12 +46,21 @@ public class MapperProxyFactory<T> {
     return methodCache;
   }
 
+  /**
+   * 根据代理类构建代理实例
+   * @param mapperProxy mapper代理类
+   */
   @SuppressWarnings("unchecked")
   protected T newInstance(MapperProxy<T> mapperProxy) {
     return (T) Proxy.newProxyInstance(mapperInterface.getClassLoader(), new Class[] { mapperInterface }, mapperProxy);
   }
 
+  /**
+   * 根据SqlSession构建代理实例
+   * @param sqlSession SqlSession
+   */
   public T newInstance(SqlSession sqlSession) {
+    // mapperInterface在注册时已指定，methodCache作为优化缓存
     final MapperProxy<T> mapperProxy = new MapperProxy<T>(sqlSession, mapperInterface, methodCache);
     return newInstance(mapperProxy);
   }

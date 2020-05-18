@@ -74,10 +74,12 @@ public class DefaultSqlSession implements SqlSession {
   @Override
   public <T> T selectOne(String statement, Object parameter) {
     // Popular vote was to return null on 0 results and throw exception on too many.
+    // 单结果只是多结果的特殊情况
     List<T> list = this.<T>selectList(statement, parameter);
     if (list.size() == 1) {
       return list.get(0);
     } else if (list.size() > 1) {
+      // 这个异常是不是很熟悉
       throw new TooManyResultsException("Expected one result (or null) to be returned by selectOne(), but found: " + list.size());
     } else {
       return null;
@@ -96,14 +98,19 @@ public class DefaultSqlSession implements SqlSession {
 
   @Override
   public <K, V> Map<K, V> selectMap(String statement, Object parameter, String mapKey, RowBounds rowBounds) {
+    // 虽然是Map，但是先调用selectList再转为Map
     final List<? extends V> list = selectList(statement, parameter, rowBounds);
+    // Map的默认ResultHandler
     final DefaultMapResultHandler<K, V> mapResultHandler = new DefaultMapResultHandler<K, V>(mapKey,
         configuration.getObjectFactory(), configuration.getObjectWrapperFactory(), configuration.getReflectorFactory());
     final DefaultResultContext<V> context = new DefaultResultContext<V>();
+    // List转Map
     for (V o : list) {
       context.nextResultObject(o);
+      // 处理器进行处理
       mapResultHandler.handleResult(context);
     }
+    // 返回Map
     return mapResultHandler.getMappedResults();
   }
 
@@ -144,6 +151,7 @@ public class DefaultSqlSession implements SqlSession {
   @Override
   public <E> List<E> selectList(String statement, Object parameter, RowBounds rowBounds) {
     try {
+      // 获取MappedStatement对象
       MappedStatement ms = configuration.getMappedStatement(statement);
       return executor.query(ms, wrapCollection(parameter), rowBounds, Executor.NO_RESULT_HANDLER);
     } catch (Exception e) {
@@ -166,7 +174,9 @@ public class DefaultSqlSession implements SqlSession {
   @Override
   public void select(String statement, Object parameter, RowBounds rowBounds, ResultHandler handler) {
     try {
+      // 获取MappedStatement对象
       MappedStatement ms = configuration.getMappedStatement(statement);
+      // 执行器调用
       executor.query(ms, wrapCollection(parameter), rowBounds, handler);
     } catch (Exception e) {
       throw ExceptionFactory.wrapException("Error querying database.  Cause: " + e, e);
@@ -182,6 +192,7 @@ public class DefaultSqlSession implements SqlSession {
 
   @Override
   public int insert(String statement, Object parameter) {
+    // 同样调用了重载的update方法
     return update(statement, parameter);
   }
 
@@ -194,7 +205,9 @@ public class DefaultSqlSession implements SqlSession {
   public int update(String statement, Object parameter) {
     try {
       dirty = true;
+      // 获取MappedStatement对象
       MappedStatement ms = configuration.getMappedStatement(statement);
+      // 执行器执行update,注意参数的处理
       return executor.update(ms, wrapCollection(parameter));
     } catch (Exception e) {
       throw ExceptionFactory.wrapException("Error updating database.  Cause: " + e, e);
@@ -210,6 +223,7 @@ public class DefaultSqlSession implements SqlSession {
 
   @Override
   public int delete(String statement, Object parameter) {
+    // 同样调用了重载的update方法
     return update(statement, parameter);
   }
 
@@ -318,18 +332,24 @@ public class DefaultSqlSession implements SqlSession {
   }
 
   private Object wrapCollection(final Object object) {
+    // 注意：参数的第三次处理
+    // 参数是单对象只能是无@Param的单参数方法
     if (object instanceof Collection) {
       StrictMap<Object> map = new StrictMap<Object>();
+      // 新增占位参数：collection
       map.put("collection", object);
+      // 新增占位参数：list
       if (object instanceof List) {
         map.put("list", object);
       }
       return map;
     } else if (object != null && object.getClass().isArray()) {
       StrictMap<Object> map = new StrictMap<Object>();
+      // 新增占位参数：array
       map.put("array", object);
       return map;
     }
+    // 非集合或者数组，还按照以前解析的处理
     return object;
   }
 

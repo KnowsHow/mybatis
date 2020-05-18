@@ -43,10 +43,13 @@ public class PreparedStatementHandler extends BaseStatementHandler {
   @Override
   public int update(Statement statement) throws SQLException {
     PreparedStatement ps = (PreparedStatement) statement;
+    // 直接执行
     ps.execute();
+    // 返回影响的行数
     int rows = ps.getUpdateCount();
     Object parameterObject = boundSql.getParameterObject();
     KeyGenerator keyGenerator = mappedStatement.getKeyGenerator();
+    // 键后续处理
     keyGenerator.processAfter(executor, mappedStatement, ps, parameterObject);
     return rows;
   }
@@ -54,13 +57,16 @@ public class PreparedStatementHandler extends BaseStatementHandler {
   @Override
   public void batch(Statement statement) throws SQLException {
     PreparedStatement ps = (PreparedStatement) statement;
+    // 核心
     ps.addBatch();
   }
 
   @Override
   public <E> List<E> query(Statement statement, ResultHandler resultHandler) throws SQLException {
     PreparedStatement ps = (PreparedStatement) statement;
+    // 执行
     ps.execute();
+    // 结果集处理
     return resultSetHandler.<E> handleResultSets(ps);
   }
 
@@ -74,6 +80,7 @@ public class PreparedStatementHandler extends BaseStatementHandler {
   @Override
   protected Statement instantiateStatement(Connection connection) throws SQLException {
     String sql = boundSql.getSql();
+    // 自增主键的处理
     if (mappedStatement.getKeyGenerator() instanceof Jdbc3KeyGenerator) {
       String[] keyColumnNames = mappedStatement.getKeyColumns();
       if (keyColumnNames == null) {
@@ -81,6 +88,7 @@ public class PreparedStatementHandler extends BaseStatementHandler {
       } else {
         return connection.prepareStatement(sql, keyColumnNames);
       }
+    // 结果集的处理
     } else if (mappedStatement.getResultSetType() != null) {
       return connection.prepareStatement(sql, mappedStatement.getResultSetType().getValue(), ResultSet.CONCUR_READ_ONLY);
     } else {

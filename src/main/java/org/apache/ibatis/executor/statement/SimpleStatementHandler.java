@@ -43,21 +43,33 @@ public class SimpleStatementHandler extends BaseStatementHandler {
   @Override
   public int update(Statement statement) throws SQLException {
     String sql = boundSql.getSql();
+    // 参数
     Object parameterObject = boundSql.getParameterObject();
+    // 键生成
     KeyGenerator keyGenerator = mappedStatement.getKeyGenerator();
     int rows;
+    // 自增主键
     if (keyGenerator instanceof Jdbc3KeyGenerator) {
+      // 告诉数据库返回生成的键
       statement.execute(sql, Statement.RETURN_GENERATED_KEYS);
+      // 更新的总数（update的返回值为更新操作影响的数据库行数）
       rows = statement.getUpdateCount();
+      // 生成键设置到返回值中
       keyGenerator.processAfter(executor, mappedStatement, statement, parameterObject);
-    } else if (keyGenerator instanceof SelectKeyGenerator) {
+    }
+    // selectKey形式的键生成（通过查询语句生成的键，如Mapper的selectKey标签）
+    else if (keyGenerator instanceof SelectKeyGenerator) {
       statement.execute(sql);
       rows = statement.getUpdateCount();
+      // 后置处理（如果processBefore已执行过，这里是不会在执行的，这个要看selectKey配置的指定时机，order=BEFORE|AFTER）
       keyGenerator.processAfter(executor, mappedStatement, statement, parameterObject);
-    } else {
+    }
+    // 没有键生成的，直接执行
+    else {
       statement.execute(sql);
       rows = statement.getUpdateCount();
     }
+    // 返回影响的行数
     return rows;
   }
 
@@ -70,7 +82,9 @@ public class SimpleStatementHandler extends BaseStatementHandler {
   @Override
   public <E> List<E> query(Statement statement, ResultHandler resultHandler) throws SQLException {
     String sql = boundSql.getSql();
+    // 执行SQL
     statement.execute(sql);
+    // 结果集处理
     return resultSetHandler.<E>handleResultSets(statement);
   }
 
@@ -84,6 +98,7 @@ public class SimpleStatementHandler extends BaseStatementHandler {
   @Override
   protected Statement instantiateStatement(Connection connection) throws SQLException {
     if (mappedStatement.getResultSetType() != null) {
+      // 针对resultSetType配置的处理，这是一个枚举类，可设置游标是否只能想起，结果集是否同步变动
       return connection.createStatement(mappedStatement.getResultSetType().getValue(), ResultSet.CONCUR_READ_ONLY);
     } else {
       return connection.createStatement();
